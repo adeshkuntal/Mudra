@@ -1,0 +1,20 @@
+# Node.js / Backend
+Backend/node_modules/
+Backend/.env
+
+# React / Frontend
+Frontend/node_modules/
+Frontend/build/
+Frontend/.env
+
+# Python / ML Model
+mlModel/__pycache__/
+mlModel/*.pyc
+mlModel/env/
+mlModel/.env
+
+# OS / IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
