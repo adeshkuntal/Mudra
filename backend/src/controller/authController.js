@@ -1,9 +1,6 @@
-const asyncHandler = require('express-async-handler');
-
-
-
+import asyncHandler from 'express-async-handler';
 import jwt from 'jsonwebtoken'
-import User from '@/model/User'
+import User from '../model/User.js'
 
 const generateToken = (userId) => {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
@@ -65,6 +62,7 @@ const login = asyncHandler(async (req, res) => {
   });
 });
 
+
 // @desc Get current user (example protected route)
 // @route GET /api/auth/me
 // @access Private
@@ -73,4 +71,4 @@ const getMe = asyncHandler(async (req, res) => {
   res.json({ user });
 });
 
-module.exports = { signup, login, getMe };
+export { signup, login, getMe };

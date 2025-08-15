@@ -1,11 +1,8 @@
 import mongoose from 'mongoose';
 
-export default connectDB = async (mongoUri) => {
+const connectDB = async (mongoUri) => {
   try {
-    const conn = await mongoose.connect(mongoUri, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true
-    });
+    const conn = await mongoose.connect(mongoUri);
     console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
     console.error('MongoDB connection error:', error);
@@ -13,3 +10,4 @@ export default connectDB = async (mongoUri) => {
   }
 };
 
+export default connectDB
