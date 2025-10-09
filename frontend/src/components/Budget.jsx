@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import axios from "axios";
 import { useOutletContext } from "react-router-dom";
 
 const Budget = () => {
@@ -7,19 +8,38 @@ const Budget = () => {
   const [categoryName, setCategoryName] = useState("");
   const [categoryAmount, setCategoryAmount] = useState("");
 
-  const saveTotal = () => setBudgets({ ...budgets, total: Number(total) });
+  const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:4000";
 
-  const addCategory = () => {
+  const saveTotal = async () => {
+    const updated = { ...budgets, total: Number(total) };
+    setBudgets(updated);
+    await axios.put(`${API_BASE}/api/budgets`, updated);
+  };
+
+  const addCategory = async () => {
     if (!categoryName || !categoryAmount) return;
-    setBudgets({
+    const updated = {
       ...budgets,
       categories: {
         ...budgets.categories,
         [categoryName]: Number(categoryAmount)
       }
-    });
+    };
+    setBudgets(updated);
+    await axios.put(`${API_BASE}/api/budgets`, updated);
     setCategoryName("");
     setCategoryAmount("");
+  };
+
+  const deleteCategory = async (name) => {
+    if (!name) return;
+    const { [name]: _omit, ...rest } = budgets.categories || {};
+    const updated = {
+      ...budgets,
+      categories: rest,
+    };
+    setBudgets(updated);
+    await axios.put(`${API_BASE}/api/budgets`, updated);
   };
 
   return (
@@ -68,8 +88,16 @@ const Budget = () => {
 
       <ul>
         {Object.entries(budgets.categories).map(([cat, amt]) => (
-          <li key={cat} className="mb-1">
-            <span className="font-semibold">{cat}</span>: ${amt}
+          <li key={cat} className="mb-2 flex items-center justify-between">
+            <div>
+              <span className="font-semibold">{cat}</span>: ${amt}
+            </div>
+            <button
+              onClick={() => deleteCategory(cat)}
+              className="px-3 py-1 text-sm rounded bg-red-600 text-white hover:bg-red-700"
+            >
+              Delete
+            </button>
           </li>
         ))}
       </ul>

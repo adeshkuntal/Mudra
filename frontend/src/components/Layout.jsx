@@ -1,54 +1,51 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import { Toaster, toast } from "react-hot-toast";
 import { Outlet, NavLink } from "react-router-dom";
 
 export default function Layout() {
-  const [transactions, setTransactions] = useState([
-    { date: "Dec 15, 2024", description: "Grocery shopping at Whole Foods", category: "Food & Dining", type: "Expense", amount: -127.45 },
-    { date: "Dec 14, 2024", description: "Salary deposit", category: "Salary", type: "Income", amount: 3500 },
-    { date: "Dec 13, 2024", description: "Coffee at Starbucks", category: "Food & Dining", type: "Expense", amount: -5.75 },
-    { date: "Dec 13, 2024", description: "Gas station fill-up", category: "Transportation", type: "Expense", amount: -48.2 },
-  ]);
+  const [transactions, setTransactions] = useState([]);
 
   const [budgets, setBudgets] = useState({ total: 0, categories: {} });
   const [newTransaction, setNewTransaction] = useState({});
   const [showForm, setShowForm] = useState(false);
+  const [topbarWarning, setTopbarWarning] = useState("");
 
-  // ---- Budget Warnings (GLOBAL) ----
+  const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:4000";
+
+  // Initial load
   useEffect(() => {
-    if (transactions.length === 0) return;
+    const fetchAll = async () => {
+      try {
+        const [bRes, tRes] = await Promise.all([
+          axios.get(`${API_BASE}/api/budgets`),
+          axios.get(`${API_BASE}/api/transactions`),
+        ]);
+        setBudgets(bRes.data || { total: 0, categories: {} });
+        setTransactions(tRes.data || []);
+      } catch (err) {
+        console.error(err);
+        toast.error("Failed to load data");
+      }
+    };
+    fetchAll();
+  }, []);
 
-    const totalExpenses = transactions
-      .filter((t) => t.type === "Expense")
-      .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+  const expenses = transactions
+    .filter((t) => t.type === "Expense")
+    .reduce((sum, t) => sum + Math.abs(t.amount), 0);
 
-    const categoryExpenses = transactions
-      .filter((t) => t.type === "Expense")
-      .reduce((acc, t) => {
-        acc[t.category] = (acc[t.category] || 0) + Math.abs(t.amount);
-        return acc;
-      }, {});
+  const categoryExpenses = transactions
+    .filter((t) => t.type === "Expense")
+    .reduce((acc, t) => {
+      const categoryName = t.category || "";
+      acc[categoryName] = (acc[categoryName] || 0) + Math.abs(t.amount);
+      return acc;
+    }, {});
 
-    if (budgets?.total > 0 && totalExpenses > budgets.total) {
-      alert(
-        `⚠️ Total expenses ($${totalExpenses}) exceeded total budget ($${budgets.total})`
-      );
-    }
-
-    if (
-      newTransaction?.category &&
-      budgets?.categories?.[newTransaction.category] &&
-      categoryExpenses[newTransaction.category] >
-        budgets.categories[newTransaction.category]
-    ) {
-      alert(
-        `⚠️ ${newTransaction.category} expenses ($${
-          categoryExpenses[newTransaction.category]
-        }) exceeded its budget ($${
-          budgets.categories[newTransaction.category]
-        })`
-      );
-    }
-  }, [transactions, budgets]);
+  const overBudgetCategories = Object.entries(budgets?.categories || {})
+    .filter(([categoryName, limit]) => (categoryExpenses[categoryName] || 0) > Number(limit))
+    .map(([categoryName]) => categoryName);
 
   return (
     <div className="flex h-screen bg-gray-100 font-sans">
@@ -129,6 +126,23 @@ export default function Layout() {
       <div className="flex-1 flex flex-col">
         {/* Topbar */}
         <div className="flex items-center justify-between p-4 bg-white border-b shadow-sm">
+          {/* Budget Warnings */}
+          <div>
+            {budgets?.total > 0 && expenses > budgets.total && (
+              <p className="text-red-500 font-semibold text-sm">
+                ⚠️ Total expenses exceeded total budget!
+              </p>
+            )}
+            {overBudgetCategories.length > 0 && (
+              <p className="text-red-500 font-semibold text-sm">
+                ⚠️ Over budget: {overBudgetCategories.join(", ")}
+              </p>
+            )}
+            {topbarWarning && (
+              <p className="text-red-600 font-semibold text-sm">{topbarWarning}</p>
+            )}
+          </div>
+
           <div className="flex items-center w-full max-w-xl">
             <input
               type="text"
@@ -153,6 +167,7 @@ export default function Layout() {
               setNewTransaction,
               showForm,
               setShowForm,
+              setTopbarWarning,
             }}
           />
         </div>

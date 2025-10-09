@@ -54,28 +54,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Budget Warnings */}
-      <div className="mb-6">
-        {budgets?.total > 0 && expenses > budgets.total && (
-          <p className="text-red-500 font-semibold">
-            ⚠️ Total expenses exceeded total budget!
-          </p>
-        )}
-
-        <ul className="mt-2 space-y-1">
-          {Object.entries(categoryExpenses).map(([cat, amt]) => (
-            <li key={cat}>
-              {cat}: ${amt}{" "}
-              {budgets?.categories?.[cat] && amt > budgets.categories[cat] && (
-                <span className="text-red-500 font-semibold">
-                  ⚠️ Over Budget
-                </span>
-              )}
-            </li>
-          ))}
-        </ul>
-      </div>
-
       {/* Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-white p-6 rounded-2xl shadow">

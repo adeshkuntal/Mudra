@@ -1,11 +1,13 @@
 import React, { useState } from "react";
+import axios from "axios";
 import { useOutletContext } from "react-router-dom";
 import { Search, Upload, Download, Plus, Edit, Trash } from "lucide-react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 
 const Transactions = () => {
-  const { transactions, setTransactions, budgets } = useOutletContext();
+  const { transactions, setTransactions, budgets, setTopbarWarning } = useOutletContext();
+  const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:4000";
 
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
@@ -20,16 +22,32 @@ const Transactions = () => {
   });
 
   // ---- Add Transaction ----
-  const handleAddTransaction = () => {
+  const handleAddTransaction = async () => {
     if (!newTransaction.description || !newTransaction.amount || !newTransaction.date) return;
 
     const amount = parseFloat(newTransaction.amount);
-    const updatedTransactions = [
-      ...transactions,
-      { ...newTransaction, amount },
-    ];
+    const payload = { ...newTransaction, amount };
+    try {
+      const res = await axios.post(`${API_BASE}/api/transactions`, payload);
+      const saved = res.data;
+      const updatedTransactions = [saved, ...transactions];
+      setTransactions(updatedTransactions);
 
-    setTransactions(updatedTransactions);
+      // Check budget overage for the category if a budget exists
+      if (saved.type === "Expense" && saved.category && budgets?.categories?.[saved.category] != null) {
+        const spentInCategory = updatedTransactions
+          .filter(t => t.type === "Expense" && t.category === saved.category)
+          .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+        const limit = Number(budgets.categories[saved.category]);
+        if (spentInCategory > limit) {
+          setTopbarWarning(`⚠️ You’ve exceeded your ${saved.category} budget this month!`);
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to save transaction");
+      return;
+    }
     setNewTransaction({
       description: "",
       amount: "",
@@ -66,12 +84,93 @@ const Transactions = () => {
     };
   };
 
+  // ---- Delete Transaction ----
+  const handleDelete = async (txn) => {
+    // Optimistic UI update
+    const prev = transactions;
+    const removeLocal = () => setTransactions((p) => p.filter((t) => (t._id ? t._id !== txn._id : t !== txn)));
+    removeLocal();
+
+    try {
+      if (txn._id) {
+        await axios.delete(`${API_BASE}/api/transactions/${txn._id}`);
+      }
+    } catch (err) {
+      console.error(err);
+      // Revert on failure
+      setTransactions(prev);
+      alert("Failed to delete transaction");
+    }
+  };
+
   const handleExport = () => {
     if (transactions.length === 0) return;
-    const ws = XLSX.utils.json_to_sheet(transactions);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Transactions");
-    XLSX.writeFile(wb, "transactions.xlsx");
+
+    // Sheet 1: Raw Transactions
+    const txSheet = XLSX.utils.json_to_sheet(transactions.map(t => ({
+      Date: t.date,
+      Description: t.description,
+      Category: t.category,
+      Type: t.type,
+      Amount: t.amount,
+    })));
+    XLSX.utils.book_append_sheet(wb, txSheet, "Transactions");
+
+    // Build summaries
+    const categoryTotals = {};
+    const monthlyTotals = {};
+    for (const t of transactions) {
+      const monthKey = t.date ? new Date(t.date).toISOString().slice(0, 7) : ""; // YYYY-MM
+      const amountAbs = Math.abs(Number(t.amount || 0));
+      const isExpense = (t.type || "Expense") === "Expense";
+      const isIncome = (t.type || "Expense") === "Income";
+
+      const cat = t.category || "Uncategorized";
+      if (!categoryTotals[cat]) categoryTotals[cat] = { category: cat, income: 0, expenses: 0 };
+      if (isExpense) categoryTotals[cat].expenses += amountAbs; else if (isIncome) categoryTotals[cat].income += Number(t.amount || 0);
+
+      if (!monthlyTotals[monthKey]) monthlyTotals[monthKey] = { month: monthKey, income: 0, expenses: 0 };
+      if (isExpense) monthlyTotals[monthKey].expenses += amountAbs; else if (isIncome) monthlyTotals[monthKey].income += Number(t.amount || 0);
+    }
+
+    // Sheet 2: Category Summary (ready for Pie/Bar charts)
+    const categoryRows = Object.values(categoryTotals).map(r => ({
+      Category: r.category,
+      Expenses: Number(r.expenses.toFixed(2)),
+      Income: Number(r.income.toFixed(2)),
+      Net: Number((r.income - r.expenses).toFixed(2)),
+    }));
+    const catSheet = XLSX.utils.json_to_sheet(categoryRows);
+    XLSX.utils.book_append_sheet(wb, catSheet, "Category_Summary");
+
+    // Sheet 3: Monthly Summary (ready for line/bar charts)
+    const monthlyRows = Object.values(monthlyTotals)
+      .sort((a, b) => a.month.localeCompare(b.month))
+      .map(r => ({
+        Month: r.month,
+        Expenses: Number(r.expenses.toFixed(2)),
+        Income: Number(r.income.toFixed(2)),
+        Net: Number((r.income - r.expenses).toFixed(2)),
+      }));
+    const monthSheet = XLSX.utils.json_to_sheet(monthlyRows);
+    XLSX.utils.book_append_sheet(wb, monthSheet, "Monthly_Summary");
+
+    // Sheet 4: Instructions for creating charts in Excel
+    const instructions = [
+      ["Charts in Excel"],
+      ["This workbook includes ready-to-chart summary tables."],
+      ["To create a Pie Chart:"],
+      ["1. Go to Category_Summary, select Category and Expenses columns."],
+      ["2. Insert > Charts > Pie."],
+      ["To create a Bar/Line Chart by Month:"],
+      ["1. Go to Monthly_Summary, select Month, Income, Expenses."],
+      ["2. Insert > Charts > Column/Line."],
+    ];
+    const instrSheet = XLSX.utils.aoa_to_sheet(instructions);
+    XLSX.utils.book_append_sheet(wb, instrSheet, "Charts_HowTo");
+
+    XLSX.writeFile(wb, "transactions_with_summaries.xlsx");
   };
 
   const handleFileImport = (e) => {
@@ -316,7 +415,7 @@ const Transactions = () => {
                   <button className="text-gray-600 hover:text-blue-500">
                     <Edit className="w-5 h-5" />
                   </button>
-                  <button className="text-gray-600 hover:text-red-500">
+                  <button className="text-gray-600 hover:text-red-500" onClick={() => handleDelete(t)}>
                     <Trash className="w-5 h-5" />
                   </button>
                 </td>
