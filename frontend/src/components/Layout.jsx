@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Toaster, toast } from "react-hot-toast";
-import { Outlet, NavLink } from "react-router-dom";
+import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import { LogOut } from "lucide-react";
 
 export default function Layout() {
+  const navigate = useNavigate();
   const [transactions, setTransactions] = useState([]);
-
+  const [user, setUser] = useState(null);
   const [budgets, setBudgets] = useState({ total: 0, categories: {} });
   const [newTransaction, setNewTransaction] = useState({});
   const [showForm, setShowForm] = useState(false);
@@ -13,23 +15,56 @@ export default function Layout() {
 
   const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:4000";
 
-  // Initial load
+  // Check authentication and load data
   useEffect(() => {
-    const fetchAll = async () => {
+    const checkAuth = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+
+      // Set axios default header
+      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+
       try {
+        // Get user info
+        const userRes = await axios.get(`${API_BASE}/api/auth/me`);
+        setUser(userRes.data.user);
+
+        // Load user data
         const [bRes, tRes] = await Promise.all([
           axios.get(`${API_BASE}/api/budgets`),
           axios.get(`${API_BASE}/api/transactions`),
         ]);
-        setBudgets(bRes.data || { total: 0, categories: {} });
+        const budgetData = bRes.data || { total: 0, categories: {} };
+        setBudgets({ total: budgetData.total || 0, categories: budgetData.categories || {} });
         setTransactions(tRes.data || []);
       } catch (err) {
         console.error(err);
-        toast.error("Failed to load data");
+        if (err.response?.status === 401) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          navigate("/login");
+        } else {
+          toast.error("Failed to load data");
+        }
       }
     };
-    fetchAll();
-  }, []);
+
+    checkAuth();
+  }, [navigate]);
+
+  const handleLogout = async () => {
+    try {
+      await axios.post(`${API_BASE}/api/auth/logout`);
+    } catch (err) {
+      console.error("Logout error:", err);
+    }
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/login");
+  };
 
   const expenses = transactions
     .filter((t) => t.type === "Expense")
@@ -117,8 +152,15 @@ export default function Layout() {
         </nav>
 
         <div className="px-6 py-5 border-t bg-gray-50">
-          <p className="text-sm font-semibold text-gray-700">Adesh Kuntal</p>
-          <p className="text-xs text-gray-500">adeshkuntal092@gmail.com</p>
+          <p className="text-sm font-semibold text-gray-700">{user?.name || "User"}</p>
+          <p className="text-xs text-gray-500">{user?.email || ""}</p>
+          <button
+            onClick={handleLogout}
+            className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition font-semibold"
+          >
+            <LogOut className="w-4 h-4" />
+            Logout
+          </button>
         </div>
       </div>
 
@@ -159,6 +201,7 @@ export default function Layout() {
         <div className="flex-1 overflow-y-auto p-8">
           <Outlet
             context={{
+              user,
               transactions,
               setTransactions,
               budgets,

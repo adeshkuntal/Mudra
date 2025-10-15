@@ -1,4 +1,4 @@
-import React from "react";
+import React, { use } from "react";
 import { useOutletContext } from "react-router-dom";
 import {
   PieChart,
@@ -15,6 +15,8 @@ import {
 
 const Dashboard = () => {
   const { transactions, budgets } = useOutletContext();
+  const {user, setUser} = useOutletContext();
+  
 
   const income = transactions
     .filter((t) => t.type === "Income")
@@ -47,7 +49,7 @@ const Dashboard = () => {
     <div className="p-8 flex-1 overflow-y-auto">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">Welcome back, Adesh</h1>
+          <h1 className="text-3xl font-bold text-gray-800">Welcome back {user ? user.name : ""}</h1>
           <p className="text-gray-600 mt-2">
             Here’s your financial overview for this month.
           </p>
