@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Toaster, toast } from "react-hot-toast";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
-import { LogOut } from "lucide-react";
+import { LogOut, X, Send } from "lucide-react";
 
 export default function Layout() {
   const navigate = useNavigate();
@@ -12,6 +12,12 @@ export default function Layout() {
   const [newTransaction, setNewTransaction] = useState({});
   const [showForm, setShowForm] = useState(false);
   const [topbarWarning, setTopbarWarning] = useState("");
+  
+  // AI Chat states
+  const [showChat, setShowChat] = useState(false);
+  const [chatInput, setChatInput] = useState("");
+  const [chatHistory, setChatHistory] = useState([]);
+  const [aiLoading, setAiLoading] = useState(false);
 
   const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:4000";
 
@@ -64,6 +70,64 @@ export default function Layout() {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     navigate("/login");
+  };
+
+  const handleAskAI = async (message) => {
+    const userMessage = message || chatInput;
+    if (!userMessage || !userMessage.trim()) return;
+    
+    setAiLoading(true);
+    
+    // Add user message to chat
+    setChatHistory(prev => [...prev, { type: 'user', content: userMessage }]);
+    setChatInput("");
+
+    try {
+      const income = transactions
+        .filter(t => t.type === "Income")
+        .reduce((sum, t) => sum + (t.amount || 0), 0);
+      
+      const expenses = transactions
+        .filter(t => t.type === "Expense")
+        .reduce((sum, t) => sum + Math.abs(t.amount || 0), 0);
+      
+      const savings = income - expenses;
+
+      const userData = {
+        income,
+        expenses,
+        savings,
+        categories: Object.keys(budgets.categories || {}).join(', ') || 'None',
+        transactionCount: transactions.length
+      };
+
+      const response = await axios.post(`${API_BASE}/api/ai/ask`, {
+        message: userMessage,
+        userData
+      });
+
+      setChatHistory(prev => [...prev, { type: 'ai', content: response.data.response }]);
+    } catch (err) {
+      console.error("AI Error:", err);
+      toast.error("Failed to get AI response");
+      setChatHistory(prev => [...prev, { 
+        type: 'ai', 
+        content: "I'm sorry, I'm having trouble connecting right now. Please try again later." 
+      }]);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleAskAI();
+    }
+  };
+
+  const clearChat = () => {
+    setChatHistory([]);
   };
 
   const expenses = transactions
@@ -185,14 +249,22 @@ export default function Layout() {
             )}
           </div>
 
-          <div className="flex items-center w-full max-w-xl">
+          <div className="flex items-center w-full max-w-xl relative">
             <input
               type="text"
               placeholder="🔎 Ask AI: How much did I spend on food last month?"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyPress={handleKeyPress}
+              onFocus={() => setShowChat(true)}
               className="w-full px-4 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
             />
-            <button className="px-5 py-2 bg-blue-600 text-white font-medium rounded-r-lg hover:bg-blue-700 transition">
-              Ask
+            <button 
+              onClick={() => handleAskAI()}
+              disabled={aiLoading}
+              className="px-5 py-2 bg-blue-600 text-white font-medium rounded-r-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {aiLoading ? "..." : "Ask"}
             </button>
           </div>
         </div>
@@ -215,6 +287,102 @@ export default function Layout() {
           />
         </div>
       </div>
+
+      {/* AI Chat Popup */}
+      {showChat && (
+        <div className="fixed bottom-4 right-4 w-96 h-[500px] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col z-50">
+          {/* Chat Header */}
+          <div className="bg-blue-600 text-white px-4 py-3 rounded-t-2xl flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-green-400 rounded-full"></div>
+              <h3 className="font-semibold">AI Financial Assistant</h3>
+            </div>
+            <button
+              onClick={() => setShowChat(false)}
+              className="text-white hover:text-gray-200 transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Chat Messages */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+            {chatHistory.length === 0 ? (
+              <div className="text-center text-gray-500 mt-8">
+                <p className="text-lg font-semibold mb-2">👋 Hello!</p>
+                <p className="text-sm">
+                  I'm your AI financial assistant. Ask me anything about your finances!
+                </p>
+                <div className="mt-4 text-left text-xs space-y-2">
+                  <p className="font-semibold text-gray-700">Try asking:</p>
+                  <ul className="list-disc list-inside space-y-1 text-gray-600">
+                    <li>How can I save more money?</li>
+                    <li>What are my spending patterns?</li>
+                    <li>Budgeting tips for this month</li>
+                  </ul>
+                </div>
+              </div>
+            ) : (
+              chatHistory.map((msg, idx) => (
+                <div
+                  key={idx}
+                  className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                      msg.type === 'user'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white border border-gray-200 text-gray-800'
+                    }`}
+                  >
+                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                  </div>
+                </div>
+              ))
+            )}
+            {aiLoading && (
+              <div className="flex justify-start">
+                <div className="bg-white border border-gray-200 rounded-lg px-4 py-2">
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Chat Input */}
+          <div className="p-4 border-t border-gray-200 bg-white rounded-b-2xl">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Type your question..."
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              />
+              <button
+                onClick={() => handleAskAI()}
+                disabled={aiLoading || !chatInput.trim()}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
+            {chatHistory.length > 0 && (
+              <button
+                onClick={clearChat}
+                className="mt-2 text-xs text-gray-500 hover:text-red-600 transition"
+              >
+                Clear chat
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

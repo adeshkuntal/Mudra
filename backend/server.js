@@ -4,6 +4,7 @@ const cors = require("cors");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
+const axios = require("axios");
 require("dotenv").config();
 
 const app = express();
@@ -12,6 +13,8 @@ app.use(express.json());
 app.use(cookieParser());
 
 const JWT_SECRET = process.env.JWT_SECRET || "iloveyou";
+const ML_API_URL = process.env.ML_API_URL || "http://localhost:5001";
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "AIzaSyDB0MqG7N2mCPw4NmRMxkvZCpndKEXYHYk";
 
 // Models
 const userSchema = new mongoose.Schema({
@@ -257,6 +260,76 @@ app.get("/api/analytics/summary", authenticateUser, async (req, res, next) => {
       remaining: (budget?.total || 0) - expenses,
     });
   } catch (err) { next(err); }
+});
+
+// Forecast: ML predictions
+app.post("/api/forecast/predict_saving", authenticateUser, async (req, res, next) => {
+  try {
+    const response = await axios.post(`${ML_API_URL}/predict_saving`, req.body);
+    res.json(response.data);
+  } catch (err) {
+    console.error("ML API Error:", err.message);
+    res.status(500).json({ error: "Failed to predict savings" });
+  }
+});
+
+app.post("/api/forecast/predict_expense", authenticateUser, async (req, res, next) => {
+  console.log(req.body);
+  try {
+    const response = await axios.post(`${ML_API_URL}/predict_expense`, req.body);
+    res.json(response.data);
+  } catch (err) {
+    console.error("ML API Error:", err.message);
+    res.status(500).json({ error: "Failed to predict expenses" });
+  }
+});
+
+// AI Chat: Gemini integration
+app.post("/api/ai/ask", authenticateUser, async (req, res, next) => {
+    console.log(req.body);
+
+  try {
+    const { message, userData } = req.body;
+    if (!message) {
+      return res.status(400).json({ error: "Message is required" });
+    }
+
+    // Prepare context from user's financial data
+    const context = `
+You are a helpful financial assistant for a personal finance management application called Mudra.
+
+User's Financial Summary:
+- Total Income (Current Month): $${userData?.income || 0}
+- Total Expenses (Current Month): $${userData?.expenses || 0}
+- Savings (Current Month): $${userData?.savings || 0}
+- Budget Categories: ${userData?.categories || 'Not set'}
+- Number of Transactions: ${userData?.transactionCount || 0}
+
+Please provide helpful, actionable financial advice based on this information. Keep responses concise and user-friendly (max 200 words).
+`;
+
+    // Call Gemini API
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`;
+    
+    const response = await axios.post(geminiUrl, {
+      contents: [{
+        parts: [{
+          text: `${context}\n\nUser Question: ${message}\n\nPlease provide a helpful, concise response:`
+        }]
+      }]
+    }, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const aiResponse = response.data.candidates[0]?.content?.parts[0]?.text || "I'm sorry, I couldn't generate a response. Please try again.";
+
+    res.json({ response: aiResponse });
+  } catch (err) {
+    console.error("Gemini API Error:", err.message);
+    res.status(500).json({ error: "Failed to get AI response. Please try again." });
+  }
 });
 
 // Error handler

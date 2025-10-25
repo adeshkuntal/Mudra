@@ -35,8 +35,9 @@ The proposed system will include the following key features:
 - **Dashboard**: Visual overview of income, expenses, and savings.  
 - **Transaction Management**: Add, edit, and delete income/expense records with categories.  
 - **Budgeting**: Users can set monthly category-wise budgets and receive alerts.  
-- **AI Insights**: Predictions of upcoming expenses, overspending alerts, and personalized savings tips.  
-- **Reports & Export**: Graphical analysis of spending habits with export to PDF/CSV.  
+- **AI-Powered Financial Assistant**: Gemini AI integration for personalized financial advice and Q&A.  
+- **ML Predictions**: Forecast future savings and expenses using trained machine learning models.  
+- **Reports & Export**: Graphical analysis of spending habits with export to Excel.  
 - **Future Scope**: Bank integration, fraud detection, and voice-enabled assistant.  
 
 ---
@@ -87,12 +88,56 @@ The proposed system will include the following key features:
 ---
 
 ## 10. Technology Stack
-- **Frontend**: React.js, Tailwind CSS  
-- **Backend**: Node.js, Express.js  
-- **Database**: MongoDB  
-- **AI/ML**: Python (scikit-learn/ML models integrated via API)  
-- **Authentication**: JWT, bcrypt  
-- **Hosting**: Vercel/Netlify (frontend), Heroku/AWS (backend)  
+- **Frontend**: React.js, Tailwind CSS, Lucide Icons  
+- **Backend**: Node.js, Express.js, Axios  
+- **Database**: MongoDB (Mongoose)  
+- **AI/ML**: 
+  - Google Gemini Pro API for conversational AI
+  - Python Flask API serving ML models for predictions
+  - Trained models: Saving Predictor, Expense Predictor
+- **Authentication**: JWT (JSON Web Tokens), bcrypt  
+- **Hosting**: Vercel/Netlify (frontend), Heroku/AWS (backend)
+
+## 12. ML Model Integration
+
+The application includes two trained ML models:
+- **Saving Predictor**: Predicts future savings based on historical income and expense data
+- **Expense Predictor**: Forecasts future expenses using spending patterns
+
+### Running the ML Service
+
+1. Navigate to the `ml_model` directory
+2. Install Python dependencies: `pip install -r requirements.txt`
+3. Run the service: `python app.py`
+4. The ML API will be available at `http://localhost:5001`
+
+The Forecast page in the web app uses these ML models to provide AI-powered financial predictions.
+
+## 13. AI Financial Assistant
+
+The application features an intelligent AI assistant powered by Google's Gemini Pro API that provides personalized financial advice.
+
+### Features:
+- **Context-Aware Responses**: The AI has access to your financial summary (income, expenses, savings, budgets)
+- **Natural Language Processing**: Ask questions in plain English
+- **Personalized Recommendations**: Get tailored advice based on your spending patterns
+- **Instant Q&A**: Quick answers to financial questions
+
+### Example Questions:
+- "How can I save more money this month?"
+- "What are my spending patterns?"
+- "Budgeting tips for next month"
+- "How much did I spend on groceries?"
+- "Suggest ways to reduce my expenses"
+
+### How to Use:
+1. Click on the "Ask AI" search bar in the top navigation
+2. Type your financial question
+3. The AI chat popup will appear automatically
+4. Get instant, personalized financial advice
+5. Continue the conversation or click "Clear chat" to start fresh
+
+The AI uses your transaction history and budget information to provide contextually relevant financial guidance.  
 
 ---
 
