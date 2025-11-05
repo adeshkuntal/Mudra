@@ -16,7 +16,8 @@ const Forecast = () => {
     expenses: 0,
     savings: 0,
   });
-
+  
+ 
   const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:4000";
 
   // Calculate current month stats
@@ -32,14 +33,15 @@ const Forecast = () => {
       return tDate.getMonth() === currentMonth && tDate.getFullYear() === currentYear;
     });
 
-    const income = monthlyTransactions
-      .filter((t) => t.type === "Income")
-      .reduce((sum, t) => sum + (t.amount || 0), 0);
+    const income = transactions
+    .filter((t) => t.type === "Income")
+    .reduce((sum, t) => sum + t.amount, 0);
 
-    const expenses = monthlyTransactions
-      .filter((t) => t.type === "Expense")
-      .reduce((sum, t) => sum + Math.abs(t.amount || 0), 0);
+  const expenses = transactions
+    .filter((t) => t.type === "Expense")
+    .reduce((sum, t) => sum + Math.abs(t.amount), 0);
 
+  
     const savings = income - expenses;
 
     setCurrentStats({ income, expenses, savings });
@@ -64,22 +66,54 @@ const Forecast = () => {
 
       const income = monthTransactions
         .filter((t) => t.type === "Income")
-        .reduce((sum, t) => sum + (t.amount || 0), 0);
+        .reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
       const expenses = monthTransactions
         .filter((t) => t.type === "Expense")
-        .reduce((sum, t) => sum + Math.abs(t.amount || 0), 0);
+        .reduce((sum, t) => sum + Math.abs(Number(t.amount || 0)), 0);
 
-      last3Months.push({ income, expenses });
+      // Heuristics based on category keywords
+      const getCategory = (t) => (t.category || "").toString().toLowerCase();
+      const isDebt = (cat) => /\b(debt|loan|emi|mortgage|credit|repay|installment)\b/i.test(cat);
+      const isInvestment = (cat) => /\b(invest|sip|mutual|stock|equity|etf|retire|401k|ira)\b/i.test(cat);
+      const isSubscription = (cat, desc) => /\b(sub|subscription|membership|netflix|prime|spotify|yt premium|apple music|hulu|disney|plan)\b/i.test(cat) || /\b(subscription|membership)\b/i.test(desc || "");
+
+      const debtPayments = monthTransactions
+        .filter((t) => t.type === "Expense" && isDebt(getCategory(t)))
+        .reduce((sum, t) => sum + Math.abs(Number(t.amount || 0)), 0);
+
+      const investmentOutflow = monthTransactions
+        .filter((t) => t.type === "Expense" && isInvestment(getCategory(t)))
+        .reduce((sum, t) => sum + Math.abs(Number(t.amount || 0)), 0);
+
+      const subscriptionOutflow = monthTransactions
+        .filter((t) => t.type === "Expense" && isSubscription(getCategory(t), t.description))
+        .reduce((sum, t) => sum + Math.abs(Number(t.amount || 0)), 0);
+
+      last3Months.push({ income, expenses, debtPayments, investmentOutflow, subscriptionOutflow });
     }
 
     // Prepare data for ML model (use average of last 3 months)
-    const avgIncome = last3Months.reduce((sum, m) => sum + m.income, 0) / 3;
-    const avgExpenses = last3Months.reduce((sum, m) => sum + m.expenses, 0) / 3;
+    const avgIncome = last3Months.reduce((sum, m) => sum + m.income, 0) / last3Months.length;
+    const avgExpenses = last3Months.reduce((sum, m) => sum + m.expenses, 0) / last3Months.length;
+    const avgDebt = last3Months.reduce((sum, m) => sum + (m.debtPayments || 0), 0) / last3Months.length;
+    const avgInvestment = last3Months.reduce((sum, m) => sum + (m.investmentOutflow || 0), 0) / last3Months.length;
+    const avgSubscriptions = last3Months.reduce((sum, m) => sum + (m.subscriptionOutflow || 0), 0) / last3Months.length;
+
+    const monthly_income = avgIncome || currentStats.income || 0;
+    const monthly_expense_total = avgExpenses || currentStats.expenses || 0;
+    const savings_rate = monthly_income > 0 ? (monthly_income - monthly_expense_total) / monthly_income : 0;
+    const debt_to_income_ratio = monthly_income > 0 ? avgDebt / monthly_income : 0;
+    const investment_amount = avgInvestment || 0;
+    const subscription_services = avgSubscriptions || 0;
 
     return {
-      income: avgIncome || currentStats.income,
-      expense: avgExpenses || currentStats.expenses,
+      monthly_income,
+      monthly_expense_total,
+      savings_rate,
+      debt_to_income_ratio,
+      investment_amount,
+      subscription_services,
     };
   };
 

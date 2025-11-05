@@ -4,7 +4,7 @@ import { useOutletContext } from "react-router-dom";
 
 const Budget = () => {
   const { budgets, setBudgets, transactions } = useOutletContext();
-  const [total, setTotal] = useState(budgets.total || 0);
+  const [total, setTotal] = useState(Number(budgets.total ?? 0));
   const [categoryName, setCategoryName] = useState("");
   const [categoryAmount, setCategoryAmount] = useState("");
 
@@ -67,8 +67,8 @@ const Budget = () => {
     .filter(t => t.type === "Expense")
     .reduce((sum, t) => sum + Math.abs(t.amount), 0);
 
-  const remainingBudget = total - totalSpent;
-  const budgetPercentage = total > 0 ? (totalSpent / total) * 100 : 0;
+  const remainingBudget = Number(total) - totalSpent;
+  const budgetPercentage = Number(total) > 0 ? (totalSpent / Number(total)) * 100 : 0;
 
   return (
     <div className="p-8 flex-1 overflow-y-auto bg-gray-50 min-h-screen">
@@ -79,7 +79,7 @@ const Budget = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white p-6 rounded-2xl shadow">
             <h4 className="text-gray-500 mb-2">Total Budget</h4>
-            <p className="text-3xl font-bold text-gray-800">${total.toFixed(2)}</p>
+            <p className="text-3xl font-bold text-gray-800">${Number(total).toFixed(2)}</p>
           </div>
           <div className="bg-white p-6 rounded-2xl shadow">
             <h4 className="text-gray-500 mb-2">Total Spent</h4>
@@ -124,7 +124,7 @@ const Budget = () => {
               type="number"
               placeholder="Total Budget ($)"
               value={total}
-              onChange={(e) => setTotal(e.target.value)}
+              onChange={(e) => setTotal(e.target.value === '' ? 0 : e.target.valueAsNumber)}
               className="p-3 border rounded-lg flex-1 focus:ring-2 focus:ring-blue-500 focus:outline-none"
             />
             <button
@@ -168,9 +168,10 @@ const Budget = () => {
           {Object.entries(budgets.categories || {}).length > 0 ? (
             <div className="space-y-4">
               {Object.entries(budgets.categories || {}).map(([cat, amt]) => {
+                const amount = Number(amt) || 0;
                 const spent = calculateCategorySpending(cat);
-                const percentage = amt > 0 ? (spent / amt) * 100 : 0;
-                const isOverBudget = spent > amt;
+                const percentage = amount > 0 ? (spent / amount) * 100 : 0;
+                const isOverBudget = spent > amount;
                 
                 return (
                   <div key={cat} className="border rounded-lg p-4 hover:bg-gray-50 transition">
@@ -178,7 +179,7 @@ const Budget = () => {
                       <div>
                         <h3 className="font-semibold text-gray-800 text-lg">{cat}</h3>
                         <p className="text-sm text-gray-600">
-                          Budget: ${amt.toFixed(2)} | Spent: ${spent.toFixed(2)}
+                          Budget: ${amount.toFixed(2)} | Spent: ${spent.toFixed(2)}
                         </p>
                       </div>
                       <button
@@ -205,12 +206,12 @@ const Budget = () => {
                       </span>
                       {isOverBudget && (
                         <span className="text-sm text-red-600 font-semibold">
-                          Over budget by ${(spent - amt).toFixed(2)}
+                          Over budget by ${(spent - amount).toFixed(2)}
                         </span>
                       )}
-                      {!isOverBudget && amt > 0 && (
+                      {!isOverBudget && amount > 0 && (
                         <span className="text-sm text-green-600 font-semibold">
-                          ${(amt - spent).toFixed(2)} remaining
+                          ${(amount - spent).toFixed(2)} remaining
                         </span>
                       )}
                     </div>

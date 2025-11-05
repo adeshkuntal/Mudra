@@ -173,7 +173,30 @@ const Transactions = () => {
     XLSX.writeFile(wb, "transactions_with_summaries.xlsx");
   };
 
-  const handleFileImport = (e) => {
+  const persistImported = async (rows) => {
+    if (!rows || rows.length === 0) return [];
+    const requests = rows.map((r) => {
+      const payload = {
+        description: r.description || "",
+        amount: Number(r.amount || 0),
+        type: (r.type === "Income" ? "Income" : "Expense"),
+        category: r.category || "",
+        date: r.date || new Date().toISOString().slice(0, 10),
+      };
+      return axios.post(`${API_BASE}/api/transactions`, payload);
+    });
+    const results = await Promise.allSettled(requests);
+    const saved = results
+      .filter((res) => res.status === "fulfilled")
+      .map((res) => res.value.data);
+    const failed = results.filter((res) => res.status === "rejected").length;
+    if (failed > 0) {
+      console.warn(`Failed to import ${failed} transactions`);
+    }
+    return saved;
+  };
+
+  const handleFileImport = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const fileExt = file.name.split(".").pop().toLowerCase();
@@ -182,21 +205,23 @@ const Transactions = () => {
       Papa.parse(file, {
         header: true,
         skipEmptyLines: true,
-        complete: (results) => {
+        complete: async (results) => {
           const importedData = results.data.map(parseTransactionRow);
-          setTransactions((prev) => [...prev, ...importedData]);
+          const saved = await persistImported(importedData);
+          setTransactions((prev) => [...saved, ...prev]);
         },
       });
     } else if (fileExt === "xls" || fileExt === "xlsx") {
       const reader = new FileReader();
-      reader.onload = (evt) => {
+      reader.onload = async (evt) => {
         const data = new Uint8Array(evt.target.result);
         const workbook = XLSX.read(data, { type: "array" });
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
         const jsonData = XLSX.utils.sheet_to_json(sheet);
         const importedData = jsonData.map(parseTransactionRow);
-        setTransactions((prev) => [...prev, ...importedData]);
+        const saved = await persistImported(importedData);
+        setTransactions((prev) => [...saved, ...prev]);
       };
       reader.readAsArrayBuffer(file);
     } else {
