@@ -103,6 +103,25 @@ const Transactions = () => {
     }
   };
 
+  // ---- Clear All Transactions ----
+  const handleClearAll = async () => {
+    if (!transactions || transactions.length === 0) return;
+    const ok = window.confirm("Are you sure you want to delete ALL transactions? This cannot be undone.");
+    if (!ok) return;
+
+    const ids = transactions.map((t) => t._id).filter(Boolean);
+    try {
+      if (ids.length > 0) {
+        // Fire deletes in parallel, ignore individual failures
+        await Promise.allSettled(ids.map((id) => axios.delete(`${API_BASE}/api/transactions/${id}`)));
+      }
+    } catch (err) {
+      console.error("Clear all error:", err);
+    } finally {
+      setTransactions([]);
+    }
+  };
+
   const handleExport = () => {
     if (transactions.length === 0) return;
     const wb = XLSX.utils.book_new();
@@ -283,6 +302,13 @@ const Transactions = () => {
             <Download className="w-4 h-4" /> Export
           </button>
           <button
+            onClick={handleClearAll}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-50 text-red-700 border border-red-200 hover:bg-red-100"
+            title="Delete all transactions"
+          >
+            <Trash className="w-4 h-4" /> Clear All
+          </button>
+          <button
             onClick={() => setShowForm(!showForm)}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500 text-white shadow hover:bg-blue-600"
           >
@@ -428,11 +454,11 @@ const Transactions = () => {
                 <td className="p-3 font-semibold">
                   {t.amount > 0 ? (
                     <span className="text-green-600">
-                      +${t.amount.toFixed(2)}
+                      +₹{t.amount.toFixed(2)}
                     </span>
                   ) : (
                     <span className="text-red-600">
-                      -${Math.abs(t.amount).toFixed(2)}
+                      -₹{Math.abs(t.amount).toFixed(2)}
                     </span>
                   )}
                 </td>

@@ -287,27 +287,27 @@ const Forecast = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white p-6 rounded-2xl shadow">
             <div className="flex items-center justify-between mb-2">
-              <h4 className="text-gray-500 text-sm">Current Month Income</h4>
+              <h4 className="text-gray-500 text-sm">Current Income</h4>
               <TrendingUp className="w-5 h-5 text-green-600" />
             </div>
-            <p className="text-3xl font-bold text-green-600">${currentStats.income.toFixed(2)}</p>
+            <p className="text-3xl font-bold text-green-600">₹{currentStats.income.toFixed(2)}</p>
           </div>
 
           <div className="bg-white p-6 rounded-2xl shadow">
             <div className="flex items-center justify-between mb-2">
-              <h4 className="text-gray-500 text-sm">Current Month Expenses</h4>
+              <h4 className="text-gray-500 text-sm">Current Expenses</h4>
               <TrendingDown className="w-5 h-5 text-red-600" />
             </div>
-            <p className="text-3xl font-bold text-red-600">${currentStats.expenses.toFixed(2)}</p>
+            <p className="text-3xl font-bold text-red-600">₹{currentStats.expenses.toFixed(2)}</p>
           </div>
 
           <div className="bg-white p-6 rounded-2xl shadow">
             <div className="flex items-center justify-between mb-2">
-              <h4 className="text-gray-500 text-sm">Current Month Savings</h4>
+              <h4 className="text-gray-500 text-sm">Current Savings</h4>
               <DollarSign className="w-5 h-5 text-blue-600" />
             </div>
             <p className={`text-3xl font-bold ${currentStats.savings >= 0 ? "text-green-600" : "text-red-600"}`}>
-              ${currentStats.savings.toFixed(2)}
+              ₹{currentStats.savings.toFixed(2)}
             </p>
           </div>
         </div>
@@ -349,7 +349,7 @@ const Forecast = () => {
                   <h3 className="text-xl font-bold text-gray-800">Predicted Savings</h3>
                   <TrendingUp className="w-8 h-8 text-green-600" />
                 </div>
-                <p className="text-4xl font-extrabold text-green-600 mb-2">${predictions.savings}</p>
+                <p className="text-4xl font-extrabold text-green-600 mb-2">₹{predictions.savings}</p>
                 <p className="text-sm text-gray-600">
                   Based on your historical data, you're expected to save this amount next month.
                 </p>
@@ -367,7 +367,7 @@ const Forecast = () => {
                   <h3 className="text-xl font-bold text-gray-800">Predicted Expenses</h3>
                   <TrendingDown className="w-8 h-8 text-orange-600" />
                 </div>
-                <p className="text-4xl font-extrabold text-orange-600 mb-2">${predictions.expenses}</p>
+                <p className="text-4xl font-extrabold text-orange-600 mb-2">₹{predictions.expenses}</p>
                 <p className="text-sm text-gray-600">
                   Your estimated expenses for the next month based on spending patterns.
                 </p>

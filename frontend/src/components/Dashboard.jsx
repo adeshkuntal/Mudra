@@ -61,19 +61,19 @@ const Dashboard = () => {
         <div className="bg-white p-6 rounded-2xl shadow">
           <h4 className="text-gray-500 mb-2">Current Balance</h4>
           <p className="text-3xl font-bold text-gray-800">
-            ${(income - expenses).toFixed(2)}
+            ₹{(income - expenses).toFixed(2)}
           </p>
         </div>
         <div className="bg-white p-6 rounded-2xl shadow">
-          <h4 className="text-gray-500 mb-2">Monthly Income</h4>
+          <h4 className="text-gray-500 mb-2">Current Income</h4>
           <p className="text-3xl font-bold text-green-600">
-            ${income.toFixed(2)}
+            ₹{income.toFixed(2)}
           </p>
         </div>
         <div className="bg-white p-6 rounded-2xl shadow">
-          <h4 className="text-gray-500 mb-2">Monthly Expenses</h4>
+          <h4 className="text-gray-500 mb-2">Current Expenses</h4>
           <p className="text-3xl font-bold text-red-600">
-            ${expenses.toFixed(2)}
+            ₹{expenses.toFixed(2)}
           </p>
         </div>
       </div>

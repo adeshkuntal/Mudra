@@ -79,16 +79,16 @@ const Budget = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white p-6 rounded-2xl shadow">
             <h4 className="text-gray-500 mb-2">Total Budget</h4>
-            <p className="text-3xl font-bold text-gray-800">${Number(total).toFixed(2)}</p>
+            <p className="text-3xl font-bold text-gray-800">₹{Number(total).toFixed(2)}</p>
           </div>
           <div className="bg-white p-6 rounded-2xl shadow">
             <h4 className="text-gray-500 mb-2">Total Spent</h4>
-            <p className="text-3xl font-bold text-red-600">${totalSpent.toFixed(2)}</p>
+            <p className="text-3xl font-bold text-red-600">₹{totalSpent.toFixed(2)}</p>
           </div>
           <div className="bg-white p-6 rounded-2xl shadow">
             <h4 className="text-gray-500 mb-2">Remaining</h4>
             <p className={`text-3xl font-bold ${remainingBudget >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              ${remainingBudget.toFixed(2)}
+              ₹{remainingBudget.toFixed(2)}
             </p>
           </div>
         </div>
@@ -110,7 +110,7 @@ const Budget = () => {
             </div>
             {budgetPercentage > 100 && (
               <p className="text-red-600 text-sm mt-2 font-semibold">
-                ⚠️ You've exceeded your budget by ${Math.abs(remainingBudget).toFixed(2)}
+                ⚠️ You've exceeded your budget by ₹{Math.abs(remainingBudget).toFixed(2)}
               </p>
             )}
           </div>
@@ -122,7 +122,7 @@ const Budget = () => {
           <div className="flex gap-2">
             <input
               type="number"
-              placeholder="Total Budget ($)"
+              placeholder="Total Budget (₹)"
               value={total}
               onChange={(e) => setTotal(e.target.value === '' ? 0 : e.target.valueAsNumber)}
               className="p-3 border rounded-lg flex-1 focus:ring-2 focus:ring-blue-500 focus:outline-none"
@@ -151,7 +151,7 @@ const Budget = () => {
             />
             <input
               type="number"
-              placeholder="Budget ($)"
+              placeholder="Budget (₹)"
               value={categoryAmount}
               onChange={(e) => setCategoryAmount(e.target.value)}
               className="p-3 border rounded-lg w-40 focus:ring-2 focus:ring-blue-500 focus:outline-none"
@@ -179,7 +179,7 @@ const Budget = () => {
                       <div>
                         <h3 className="font-semibold text-gray-800 text-lg">{cat}</h3>
                         <p className="text-sm text-gray-600">
-                          Budget: ${amount.toFixed(2)} | Spent: ${spent.toFixed(2)}
+                          Budget: ₹{amount.toFixed(2)} | Spent: ₹{spent.toFixed(2)}
                         </p>
                       </div>
                       <button
@@ -206,12 +206,12 @@ const Budget = () => {
                       </span>
                       {isOverBudget && (
                         <span className="text-sm text-red-600 font-semibold">
-                          Over budget by ${(spent - amount).toFixed(2)}
+                          Over budget by ₹{(spent - amount).toFixed(2)}
                         </span>
                       )}
                       {!isOverBudget && amount > 0 && (
                         <span className="text-sm text-green-600 font-semibold">
-                          ${(amount - spent).toFixed(2)} remaining
+                          ₹{(amount - spent).toFixed(2)} remaining
                         </span>
                       )}
                     </div>
